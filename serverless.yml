@@ -1,0 +1,65 @@
+# "org" ensures this Service is used with the correct Serverless Framework Access Key.
+org: ligersmile
+# "service" is the name of this project. This will also be added to your AWS resource names.
+service: shui-backend
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: eu-north-1
+  iam:
+    role: arn:aws:iam::692859904232:role/service-role/test-lambda
+  httpApi:
+    cors: true
+
+package:
+  individually: true
+
+functions:
+  postMessage:
+    handler: functions/postMessage/index.handler
+    events:
+      - httpApi:
+          path: "/api/messages"
+          method: post
+  getMessages:
+    handler: functions/getMessages/index.handler
+    events:
+      - httpApi:
+          path: "/api/messages"
+          method: get
+  getUserMessage:
+    handler: functions/getUserMessage/index.handler
+    events:
+      - httpApi:
+          path: "/api/user-message"
+          method: get
+  updateMessage:
+    handler: functions/updateMessage/index.handler
+    events:
+      - httpApi:
+          path: "/api/messages/{id}"
+          method: put
+
+resources:
+  Resources:
+    messagesDb:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: messages-db
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+          - AttributeName: username # Lägg till detta för GSI
+            AttributeType: S # S för sträng
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+        GlobalSecondaryIndexes: # Definiera ett GSI
+          - IndexName: username-index # Namn på GSI
+            KeySchema:
+              - AttributeName: username
+                KeyType: HASH # Vi använder username som partition key för GSI
+            Projection:
+              ProjectionType: ALL # ALL betyder att alla attribut från den primära tabellen projiceras till indexet
